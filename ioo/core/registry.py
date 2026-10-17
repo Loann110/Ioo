@@ -1,0 +1,85 @@
+
+#/////////////////////////////////////////////
+# IMPORTS ////////////////////////////////////
+#/////////////////////////////////////////////
+import os
+import json
+import time
+import hashlib
+from pathlib import Path
+#/////////////////////////////////////////////
+# SESSION STORAGE ////////////////////////////
+#/////////////////////////////////////////////
+def store_dir(root, session_id):
+    """
+    Return the session directory used by F2 and IOO.
+    """
+
+    # Match the project/session identifiers used by prepare_f2().
+    root = os.path.realpath(root)
+    project_id = hashlib.sha256(root.encode()).hexdigest()[:16]
+    session_key = hashlib.sha256(session_id.encode()).hexdigest()[:16]
+
+    store = Path.home() / ".cache" / "ioo" / project_id / session_key
+    store.mkdir(parents=True, exist_ok=True)
+    return store
+
+#/////////////////////////////////////////////
+# LOAD CURRENT STATE /////////////////////////
+#/////////////////////////////////////////////
+def load_state(store, initial_state="A1"):
+    """
+    Return A1 for a new session; reject a corrupted state file.
+    """
+
+    path = Path(store) / "state.json"
+
+    if not path.exists():
+        return initial_state
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    state = data["state"]
+
+    if not isinstance(state, str) or not state:
+        raise ValueError("Invalid state in state.json")
+
+    return state
+
+#/////////////////////////////////////////////
+# SAVE CURRENT STATE /////////////////////////
+#/////////////////////////////////////////////
+def save_state(store, state):
+    """
+    Atomically replace state.json with the current GEMMA state.
+    """
+
+    path = Path(store) / "state.json"
+    tmp = path.with_name(f"state.{os.getpid()}.tmp")
+
+    try:
+        tmp.write_text(json.dumps({"state": state}), encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+#/////////////////////////////////////////////
+# EVENT LOG //////////////////////////////////
+#/////////////////////////////////////////////
+def log(store, event, state, reason, new_state, extra=None):
+    """
+    Append one event to events.jsonl without overwriting older events.
+    """
+
+    entry = {
+        "t": time.time(),
+        "event": event,
+        "from": state,
+        "reason": reason,
+        "to": new_state,
+    }
+
+    if extra:
+        entry.update(extra)
+
+    with (Path(store) / "events.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
