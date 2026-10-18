@@ -23,7 +23,7 @@ IGNORE_DIRS = {
     ".cache", ".turbo",
     
     # Builds
-    "dist", "builds", ".next", ".nuxt",
+    "dist", "build", "builds", ".next", ".nuxt",
     ".output", "coverage", "htmlcov",
     
     # Temporary files
