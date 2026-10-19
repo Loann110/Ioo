@@ -100,9 +100,70 @@ def changes(before, after):
     }
 
 #////////////////////////////////////////////////////////////////////////////////
+# REFERENCE CHECKS (state of the tests before Claude works) /////////////////////
+#////////////////////////////////////////////////////////////////////////////////
+def snapshot_digest(files):
+    """
+    One hash for the whole snapshot: same digest = same project content.
+    """
+    h = hashlib.sha256()
+    for rel in sorted(files):
+        h.update(rel.encode())
+        h.update(files[rel][2].encode())
+    return h.hexdigest()
+
+
+def reference_path(store):
+    """
+    Stored at project level (shared by sessions), not per session.
+    """
+    return Path(store).parent / "reference_checks.json"
+
+
+def save_reference(store, files, result):
+    """
+    Record which checks fail for this exact project content.
+    Called by F2, and by the supervisor after F5 so the next prompt can reuse it.
+    """
+    reference = {
+        "digest": snapshot_digest(files),
+        "timestamp": time.time(),
+        "event": result.get("event"),
+        "failures": sorted(set(result.get("failures") or [])),
+        "checks": result.get("checks") or [],
+    }
+    tmp = reference_path(store).with_suffix(f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(reference, indent=2), encoding="utf-8")
+    tmp.replace(reference_path(store))
+    return reference
+
+
+def reference_checks(root, store, files, verify=None):
+    """
+    Failures that already exist before Claude starts.
+
+    Reuses the stored result when the project content is unchanged
+    (typically: F5 ended the previous turn on this exact state).
+    Otherwise runs `verify(root, None)` once. Without a verifier, returns None.
+    """
+    digest = snapshot_digest(files)
+    try:
+        cached = json.loads(reference_path(store).read_text(encoding="utf-8"))
+        if cached.get("digest") == digest:
+            return dict(cached, source="cache")
+    except (OSError, ValueError):
+        pass
+
+    if verify is None:
+        return None
+
+    return dict(save_reference(store, files, verify(root, None)), source="run")
+
+
+#////////////////////////////////////////////////////////////////////////////////
 # F2 PREPARATION ////////////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////////////////
-def prepare_f2(root, session_id):
+def prepare_f2(root, session_id, verify=None):
     """
     Capture and save the initial project state.
 
@@ -112,6 +173,9 @@ def prepare_f2(root, session_id):
         Path to the project directory.
     session_id : str
         Unique identifier of the Claude Code session.
+    verify : callable, optional
+        F5's verify(root, changed), injected by the supervisor, used to record
+        which checks already fail before Claude starts.
 
     Returns
     -------
@@ -137,7 +201,8 @@ def prepare_f2(root, session_id):
         "timestamp": timestamp,
         "files": files,
         "git_head": git(root, "rev-parse", "HEAD"),
-        "git_status": git(root, "status", "--short")
+        "git_status": git(root, "status", "--short"),
+        "reference": reference_checks(root, store, files, verify),
     }
 
     # Save the baseline to disk.
@@ -150,5 +215,6 @@ def prepare_f2(root, session_id):
     return {
         "event": "prepared",
         "baseline": str(baseline_path),
-        "files_count": len(files)
+        "files_count": len(files),
+        "reference": (baseline["reference"] or {}).get("source"),
     }
