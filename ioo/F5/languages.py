@@ -139,4 +139,15 @@ def check_toml(files):
         unsupported="toml_parser_not_installed" if tomllib is None else None,
     )
 
-
+#/////////////////////////////////////////////
+# PYTHON SYNTAX VERIFICATION /////////////////
+#/////////////////////////////////////////////
+def check_python_syntax(files):
+    """
+    Compile in memory: catches syntax errors even without tests, writes no .pyc.
+    """
+    return _parse_file(
+        "python_syntax",
+        files,
+        lambda text: compile(text, "<file>", "exec", dont_inherit=True),
+    )
