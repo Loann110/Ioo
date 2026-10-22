@@ -108,6 +108,11 @@ def _parse_file(name, files, parser, unsupported=None):
 
     return result(name, "ok") if count else None
 
+#################################################################################
+#################################################################################
+# FILE FORMATS AND SYNTAX VERIFICATION ##########################################
+#################################################################################
+#################################################################################
 
 #/////////////////////////////////////////////
 # JSON VERIFICATION //////////////////////////
@@ -122,3 +127,16 @@ def check_json(files):
         return None 
 
     return _parse_file("json", strict, json.loads)
+
+#/////////////////////////////////////////////
+# TOML VERIFICATION //////////////////////////
+#/////////////////////////////////////////////
+def check_toml(files):
+    return _parse_file(
+        "toml",
+        files,
+        tomllib.loads if tomllib else None,
+        unsupported="toml_parser_not_installed" if tomllib is None else None,
+    )
+
+
