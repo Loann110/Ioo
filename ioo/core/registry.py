@@ -99,3 +99,17 @@ def read_json(path, default=None):
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except(OSError, ValueError):
         return default
+    
+def write_json(path, data):
+    """ 
+    Atomically replace a JSON file
+    (A crash never leaves half a file)
+    """
+    path = Path(path)
+    tmp = path.with_name(f"{path.stem}.{os.getpid()}.tmp")
+    
+    try:
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
