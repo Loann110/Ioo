@@ -281,3 +281,24 @@ def verify(root, changed=None, budget=None):
         "checks": _summary(checks),
         "logs": [],
     }
+
+
+#/////////////////////////////////////////////
+# SAFE CHECK EXECUTION ///////////////////////
+#/////////////////////////////////////////////
+def _safe(outcomes):
+    """
+    A crashing check must not disable F5: report it as unverified and
+    stop checking this project.
+    """
+    try:
+        yield from outcomes
+    except Exception as exc:
+        crashed = lang.result(
+            "internal",
+            "unverified",
+            "check_error",
+            output=f"{type(exc).__name__}: {exc}"[:300],
+        )
+        crashed["log"] = traceback.format_exc()
+        yield crashed
