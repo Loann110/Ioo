@@ -203,11 +203,10 @@ def prepare_f2(root, session_id, verify=None):
         "reference": reference_checks(root, store, files, verify),
     }
 
-    # Save the baseline to disk.
+    # Save the baseline to disk.    
     baseline_path = store / "baseline.json"
 
-    with baseline_path.open("w", encoding="utf-8") as f:
-        json.dump(baseline, f, indent=2)
+    registry.write_json(baseline_path, baseline)
 
     # Notify the GEMMA supervisor that F2 preparation is complete.
     return {
