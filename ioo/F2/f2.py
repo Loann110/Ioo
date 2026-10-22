@@ -50,7 +50,7 @@ def project_files(root):
         for name in sorted(names):
             path = os.path.join(folder, name)
 
-            if name.startswith(".env") or name.endswith((".pem", ".key")):
+            if (name.startswith(".env") and name != ".env.example") or name.endswith((".pem", ".key")):
                 continue
 
             if os.path.getsize(path) <= MAX_FILE_BYTES:
