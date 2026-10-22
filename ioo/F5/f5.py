@@ -176,3 +176,108 @@ def _checks(project, files, deadline, root):
 
     if ".py" in suffixes:
         yield lang.check_python_syntax(by_ext[".py"])
+
+
+#/////////////////////////////////////////////
+# F5 VERIFICATION ORCHESTRATOR ///////////////
+#/////////////////////////////////////////////
+def verify(root, changed=None, budget=None):
+    """
+    Verify applicable files without invoking any language model.
+    """
+    root = Path(root).resolve()
+
+    if not root.is_dir():
+        return {
+            "event": "unverified",
+            "reason": "project_not_found",
+            "checks": [],
+        }
+
+    try:
+        files = changed_files(root, changed)
+    except (ValueError, TypeError) as exc:
+        return {
+            "event": "unverified",
+            "reason": "invalid_file_paths",
+            "checks": [],
+            "detail": str(exc),
+        }
+
+    groups = {}
+
+    for path in files:
+        project = project_for(root, path)
+        groups.setdefault(project, []).append(path)
+
+    checks = []
+    deadline = time.monotonic() + (
+        TIME_BUDGET if budget is None else budget
+    )
+
+    for project, paths in sorted(
+        groups.items(),
+        key=lambda pair: str(pair[0]),
+    ):
+        outcomes = _checks(project, paths, deadline, root)
+
+        for outcome in outcomes:
+            if outcome is None:
+                continue
+
+            outcome["project"] = (
+                str(project.relative_to(root)) or "."
+            )
+            checks.append(outcome)
+
+    failed = [
+        c for c in checks
+        if c["status"] == "fail"
+    ]
+
+    if failed:
+        first = failed[0]
+
+        return {
+            "event": "fail",
+            "reason": first.get("reason"),
+            "check": first["name"],
+            "command": first.get("command"),
+            "output": first.get("output"),
+            "returncode": first.get("returncode"),
+            "failures": sorted({
+                f
+                for c in failed
+                for f in c.get("failures", [])
+            }),
+            "failed": [
+                {
+                    "name": c["name"],
+                    "project": c["project"],
+                    "command": c.get("command"),
+                    "returncode": c.get("returncode"),
+                    "excerpts": {},
+                }
+                for c in failed
+            ],
+            "checks": _summary(checks),
+            "logs": [],
+        }
+
+    if checks and all(
+        c["status"] == "ok" for c in checks
+    ):
+        return {
+            "event": "ok",
+            "checks": _summary(checks),
+        }
+
+    return {
+        "event": "unverified",
+        "reason": (
+            "no_applicable_checks"
+            if not checks else "incomplete_coverage"
+        ),
+        "checks": _summary(checks),
+        "logs": [],
+    }
