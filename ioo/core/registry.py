@@ -53,14 +53,7 @@ def save_state(store, state):
     Atomically replace state.json with the current GEMMA state.
     """
 
-    path = Path(store) / "state.json"
-    tmp = path.with_name(f"state.{os.getpid()}.tmp")
-
-    try:
-        tmp.write_text(json.dumps({"state": state}), encoding="utf-8")
-        tmp.replace(path)
-    finally:
-        tmp.unlink(missing_ok=True)
+    write_json(Path(store) / "state.json", {"state":state})
 
 #/////////////////////////////////////////////
 # EVENT LOG //////////////////////////////////
