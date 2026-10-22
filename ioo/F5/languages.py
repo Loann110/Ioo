@@ -41,3 +41,19 @@ JSONC = re.compile(
     re.I,
 )
 
+#/////////////////////////////////////////////
+# CHECK RESULT ///////////////////////////////
+#/////////////////////////////////////////////
+def result(name, status, reason=None, command=None, output=None, returncode=None):
+    """
+    One check result.
+    Only executed successful checks may return 'ok'.
+    """
+    return {
+        "name": name,
+        "status": status,
+        "reason": reason,
+        "command": command,
+        "output": output,
+        "returncode": returncode,
+    }
