@@ -152,3 +152,27 @@ def _summary(checks):
         }
         for c in checks
     ]
+
+
+#/////////////////////////////////////////////
+# CHECK DISPATCHER ///////////////////////////
+#/////////////////////////////////////////////
+def _checks(project, files, deadline, root):
+    """
+    Execute only checks supported at this stage.
+    """
+    by_ext = {}
+
+    for path in files:
+        by_ext.setdefault(path.suffix.lower(), []).append(path)
+
+    suffixes = set(by_ext)
+
+    if ".json" in suffixes:
+        yield lang.check_json(by_ext[".json"])
+
+    if ".toml" in suffixes:
+        yield lang.check_toml(by_ext[".toml"])
+
+    if ".py" in suffixes:
+        yield lang.check_python_syntax(by_ext[".py"])
