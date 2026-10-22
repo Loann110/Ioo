@@ -62,3 +62,46 @@ def project_for(root, path):
             return root
 
         folder = folder.parent
+
+
+#/////////////////////////////////////////////
+# SOURCE FILE DISCOVERY //////////////////////
+#/////////////////////////////////////////////
+def scan_files(root):
+    """
+    Bounded discovery when F1 did not supply a change list.
+    """
+    selected = []
+
+    for folder, dirs, names in os.walk(root):
+        dirs[:] = sorted(
+            d for d in dirs
+            if d not in IGNORE_DIRS and not d.startswith(".")
+        )
+
+        if len(Path(folder).relative_to(root).parts) >= 4:
+            dirs.clear()
+
+        for name in sorted(names):
+            if len(selected) >= 1000:
+                return selected
+
+            path = Path(folder) / name
+
+            if path.is_symlink():
+                continue
+
+            if (
+                path.suffix.lower() in (
+                    NODE_EXT | {
+                        ".py", ".html", ".htm",
+                        ".css", ".scss", ".json",
+                        ".toml", ".yaml", ".yml",
+                        ".sql", ".prisma",
+                    }
+                )
+                or name == ".env.example"
+            ):
+                selected.append(path)
+
+    return selected
