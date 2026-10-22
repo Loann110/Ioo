@@ -132,6 +132,11 @@ def changed_files(root, changed):
         if not candidate.is_relative_to(root):
             raise ValueError(f"File outside project: {item}")
 
+        relative = candidate.relative_to(root)
+        
+        if any(part in IGNORE_DIRS for part in relative.parts[:-1]):
+            continue
+        
         paths.append(candidate)
 
     return list(dict.fromkeys(paths))
