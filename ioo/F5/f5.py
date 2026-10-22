@@ -43,3 +43,22 @@ NODE_EXT = {
 TS_EXT = {".ts", ".tsx", ".vue", ".svelte"}
 
 CODE_EXT = NODE_EXT | {".py"}
+
+
+#/////////////////////////////////////////////
+# PROJECT ROOT DETECTION /////////////////////
+#/////////////////////////////////////////////
+def project_for(root, path):
+    """
+    Choose the nearest parent carrying a project marker.
+    """
+    folder = path if path.is_dir() else path.parent
+
+    while True:
+        if any((folder / marker).exists() for marker in MARKERS):
+            return folder
+
+        if folder == root or folder == folder.parent:
+            return root
+
+        folder = folder.parent
