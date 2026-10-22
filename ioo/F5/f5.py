@@ -105,3 +105,33 @@ def scan_files(root):
                 selected.append(path)
 
     return selected
+
+
+#/////////////////////////////////////////////
+# CHANGED FILE NORMALIZATION /////////////////
+#/////////////////////////////////////////////
+def changed_files(root, changed):
+    """
+    Turn F1's relative paths into safe project-contained Path values.
+    """
+    if changed is None:
+        return scan_files(root)
+
+    if isinstance(changed, dict):
+        changed = [
+                    *changed.get("added", []),
+                    *changed.get("modified", []),
+                    *changed.get("deleted", []),
+                    ]
+
+    paths = []
+
+    for item in changed:
+        candidate = (root / item).resolve()
+
+        if not candidate.is_relative_to(root):
+            raise ValueError(f"File outside project: {item}")
+
+        paths.append(candidate)
+
+    return list(dict.fromkeys(paths))
