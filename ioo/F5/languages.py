@@ -57,3 +57,15 @@ def result(name, status, reason=None, command=None, output=None, returncode=None
         "output": output,
         "returncode": returncode,
     }
+
+#/////////////////////////////////////////////
+# FILE READING ///////////////////////////////
+#/////////////////////////////////////////////
+def _read(path, strict=False):
+    """
+    Strict decoding only where the encoding itself is being checked.
+    """
+    return Path(path).read_text(
+        encoding="utf-8",
+        errors="strict" if strict else "replace",
+    )
