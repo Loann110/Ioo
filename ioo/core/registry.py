@@ -20,7 +20,7 @@ def store_dir(root, session_id):
     project_id = hashlib.sha256(root.encode()).hexdigest()[:16]
     session_key = hashlib.sha256(session_id.encode()).hexdigest()[:16]
 
-    store = Path.home() / ".cache" / "ioo" / project_id / session_key
+    store = cache_root() / project_id / session_key
     store.mkdir(parents=True, exist_ok=True)
     return store
 
