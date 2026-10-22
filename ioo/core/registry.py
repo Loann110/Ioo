@@ -89,3 +89,4 @@ def cache_root():
     Where Ioo keeps its files.
     Ioo cache lets tests stay out of the user's cache.
     """
+    return Path(os.environ.get("IOO_CACHE") or Path.home() / ".cache" / "ioo")
