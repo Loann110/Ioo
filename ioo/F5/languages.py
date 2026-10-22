@@ -69,3 +69,41 @@ def _read(path, strict=False):
         encoding="utf-8",
         errors="strict" if strict else "replace",
     )
+    
+#/////////////////////////////////////////////
+# FILE PARSING ///////////////////////////////
+#/////////////////////////////////////////////
+def _parse_file(name, files, parser, unsupported=None):
+    """
+    Parse the existing files independently and aggregate their results.
+    """
+    if unsupported:
+        return result(name, "unverified", unsupported)
+
+    errors, count = [], 0
+
+    for path in files:
+        if not path.is_file():
+            continue  # A deleted file cannot be parsed.
+
+        count += 1
+
+        try:
+            parser(_read(path, strict=True))
+        except (OSError, ValueError, UnicodeError, SyntaxError) as exc:
+            errors.append(f"{path.name}: {str(exc)[:160]}")
+
+    if errors:
+        failed = result(
+            name,
+            "fail",
+            "invalid_syntax",
+            output="\n".join(errors)[-OUTPUT_TAIL:],
+        )
+        failed["failures"] = [
+            f"{name}: {error}" for error in errors
+        ]
+        failed["log"] = "\n".join(errors)
+        return failed
+
+    return result(name, "ok") if count else None
