@@ -53,7 +53,15 @@ def project_files(root):
             if (name.startswith(".env") and name != ".env.example") or name.endswith((".pem", ".key")):
                 continue
 
-            if os.path.getsize(path) <= MAX_FILE_BYTES:
+            if os.path.islink(path):
+                continue
+
+            try:
+                size = os.path.getsize(path)
+            except OSError:
+                continue
+
+            if size <= MAX_FILE_BYTES:
                 yield os.path.relpath(path, root).replace("\\", "/")
 
 #////////////////////////////////////////////////////////////////////////////////
