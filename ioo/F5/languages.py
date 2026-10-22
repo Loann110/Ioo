@@ -107,3 +107,18 @@ def _parse_file(name, files, parser, unsupported=None):
         return failed
 
     return result(name, "ok") if count else None
+
+
+#/////////////////////////////////////////////
+# JSON VERIFICATION //////////////////////////
+#/////////////////////////////////////////////
+def check_json(files):
+    """
+    Strict JSON only. JSONC must use a dedicated parser.
+    """
+    strict = [p for p in files if not JSONC.match(p.name)]
+
+    if not strict:
+        return None 
+
+    return _parse_file("json", strict, json.loads)
