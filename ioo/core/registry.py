@@ -90,3 +90,12 @@ def cache_root():
     Ioo cache lets tests stay out of the user's cache.
     """
     return Path(os.environ.get("IOO_CACHE") or Path.home() / ".cache" / "ioo")
+
+def read_json(path, default=None):
+    """ 
+    Return the file's JSON content or default when it is missing or corrupted
+    """
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except(OSError, ValueError):
+        return default
