@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-from ioo.F2.f2 import snapshot, changes
+from ioo.F2.f2 import snapshot, changes, snapshot_digest
 
 #/////////////////////////////////////////////
 # GLOBALS ////////////////////////////////////
@@ -82,14 +82,18 @@ def anomalies(root, tool, tool_input):
 #/////////////////////////////////////////////
 # END OF CLAUDE'S TURN ///////////////////////
 #/////////////////////////////////////////////
+
 def end_of_turn(root, store):
     """
     Compare monitored files with F2 and request tests if any changed.
+    The digest identifies the exact content F5 verifies (proofs, anti-loop).
     """
     baseline = json.loads((Path(store) / "baseline.json").read_text(encoding="utf-8"))
     current, _ = snapshot(os.path.realpath(root), baseline["files"])
     diff = changes(baseline["files"], current)
-    
+    digest = snapshot_digest(current)
+
     if not any(diff.values()):
-        return {"event": "no_change"}
-    return {"event": "test", **diff}
+        return {"event": "no_change", "digest": digest}
+    return {"event": "test", **diff, "digest": digest}
+
