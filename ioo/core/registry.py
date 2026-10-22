@@ -83,3 +83,9 @@ def log(store, event, state, reason, new_state, extra=None):
 
     with (Path(store) / "events.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+def cache_root():
+    """
+    Where Ioo keeps its files.
+    Ioo cache lets tests stay out of the user's cache.
+    """
