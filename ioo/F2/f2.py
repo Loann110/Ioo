@@ -7,6 +7,8 @@ import time
 import subprocess
 import json
 from pathlib import Path
+
+from ioo.core import registry
 #/////////////////////////////////////////////
 # GLOBALS ////////////////////////////////////
 #/////////////////////////////////////////////
@@ -186,12 +188,8 @@ def prepare_f2(root, session_id, verify=None):
     # Resolve the project path.
     root = os.path.realpath(root)
 
-    # Create a unique storage directory for the project and session.
-    project_id = hashlib.sha256(root.encode()).hexdigest()[:16]
-    session_key = hashlib.sha256(session_id.encode()).hexdigest()[:16]
-
-    store = Path.home() / ".cache" / "ioo" / project_id / session_key
-    store.mkdir(parents=True, exist_ok=True)
+    # Store the baseline alongside IOO session state.
+    store = registry.store_dir(root, session_id)
 
     # Capture the initial project snapshot.
     files, timestamp = snapshot(root, {})
