@@ -135,3 +135,20 @@ def changed_files(root, changed):
         paths.append(candidate)
 
     return list(dict.fromkeys(paths))
+
+
+#/////////////////////////////////////////////
+# CHECK SUMMARY //////////////////////////////
+#/////////////////////////////////////////////
+def _summary(checks):
+    """
+    Log metadata only
+    stderr/stdout stays out of the event registry.
+    """
+    return [
+        {
+            k: c[k]
+            for k in ("name", "project", "status", "reason")
+        }
+        for c in checks
+    ]
