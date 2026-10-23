@@ -189,12 +189,19 @@ def _checks(project, files, deadline, root):
         yield lang.check_python(project, deadline)
 
 
+
 #/////////////////////////////////////////////
 # F5 VERIFICATION ORCHESTRATOR ///////////////
 #/////////////////////////////////////////////
 def verify(root, changed=None, budget=None):
     """
-    Verify applicable files without invoking any language model.
+    Verify project changes.
+    Return {event: ok|fail|unverified, checks: [...]}.
+
+    'changed' is F1's added + modified + deleted relative paths.
+    None scans a bounded part of the project.
+    Checks never install tools or apply migrations.
+    'budget' bounds execution in seconds.
     """
     root = Path(root).resolve()
 
@@ -214,7 +221,7 @@ def verify(root, changed=None, budget=None):
             "checks": [],
             "detail": str(exc),
         }
-    
+
     lang.forget_bytecode(files)
 
     groups = {}
@@ -223,26 +230,33 @@ def verify(root, changed=None, budget=None):
         project = project_for(root, path)
         groups.setdefault(project, []).append(path)
 
-    checks = []
     deadline = time.monotonic() + (
         TIME_BUDGET if budget is None else budget
     )
 
+    checks = []
+
     for project, paths in sorted(
         groups.items(),
-        key=lambda pair: str(pair[0]),
+        key=lambda entry: str(entry[0]),
     ):
-        outcomes = _checks(project, paths, deadline, root)
-        outcomes = _safe(outcomes)
-
-        for outcome in outcomes:
+        for outcome in _safe(
+            _checks(project, paths, deadline, root)
+        ):
             if outcome is None:
                 continue
 
             outcome["project"] = (
                 str(project.relative_to(root)) or "."
             )
+
             checks.append(outcome)
+
+    # Preserve failures for comparison with F2's reference.
+    logs = [
+        c for c in checks
+        if c.get("log") or c.get("output")
+    ]
 
     failed = [
         c for c in checks
@@ -254,11 +268,11 @@ def verify(root, changed=None, budget=None):
 
         return {
             "event": "fail",
-            "reason": first.get("reason"),
+            "reason": first["reason"],
             "check": first["name"],
-            "command": first.get("command"),
-            "output": first.get("output"),
-            "returncode": first.get("returncode"),
+            "output": first["output"],
+            "command": first["command"],
+            "returncode": first["returncode"],
             "failures": sorted({
                 f
                 for c in failed
@@ -268,14 +282,17 @@ def verify(root, changed=None, budget=None):
                 {
                     "name": c["name"],
                     "project": c["project"],
-                    "command": c.get("command"),
-                    "returncode": c.get("returncode"),
-                    "excerpts": {},
+                    "command": c["command"],
+                    "returncode": c["returncode"],
+                    "excerpts": {
+                        f: lang.excerpt(c.get("log"), f)
+                        for f in c.get("failures", [])[:50]
+                    },
                 }
                 for c in failed
             ],
             "checks": _summary(checks),
-            "logs": [],
+            "logs": logs,
         }
 
     if checks and all(
@@ -293,7 +310,7 @@ def verify(root, changed=None, budget=None):
             if not checks else "incomplete_coverage"
         ),
         "checks": _summary(checks),
-        "logs": [],
+        "logs": logs,
     }
 
 
