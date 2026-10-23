@@ -193,6 +193,10 @@ def _checks(project, files, deadline, root):
         for p in files
     ):
         yield lang.check_javascript(project, deadline, root)
+    
+    if suffixes & {".js", ".mjs", ".cjs"}:
+        yield lang.check_node_syntax(project, files, deadline)
+
 
 
 #/////////////////////////////////////////////
