@@ -771,3 +771,72 @@ def check_javascript(project, deadline, root=None):
     return _service_down(
         run(name, command, project, deadline)
     )
+
+
+#/////////////////////////////////////////////
+# NODE SYNTAX VERIFICATION ///////////////////
+#/////////////////////////////////////////////
+BUNDLED = {
+    "react",
+    "preact",
+    "next",
+    "vue",
+    "nuxt",
+    "svelte",
+    "@sveltejs/kit",
+    "solid-js",
+}
+
+
+def check_node_syntax(project, files, deadline):
+    """
+    node --check on plain JS (Node backends, scripts): syntax only.
+    Skipped for bundled frontends (JSX in .js) and Node < 22
+    (no ESM detection).
+    """
+    node = shutil.which("node")
+
+    existing = [
+        p for p in files
+        if p.is_file()
+        and p.suffix.lower() in (".js", ".mjs", ".cjs")
+    ][:50]
+
+    if (
+        not node
+        or not existing
+        or BUNDLED & set(
+            _dependencies(_package(project) or {})
+        )
+    ):
+        return None
+
+    try:
+        version = subprocess.run(
+            [node, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout
+
+        if int(
+            version.strip().lstrip("v").split(".")[0]
+        ) < 22:
+            return None
+
+    except (
+        OSError,
+        ValueError,
+        subprocess.SubprocessError,
+    ):
+        return None
+
+    return run_all(
+        "node_syntax",
+        [
+            [node, "--check", str(p)]
+            for p in existing
+        ],
+        project,
+        deadline,
+    )
