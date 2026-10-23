@@ -204,6 +204,13 @@ def _checks(project, files, deadline, root):
             suffixes,
             root,
         )
+    
+    if suffixes & {".yaml", ".yml"}:
+        yield lang.check_yaml(
+            by_ext.get(".yaml", [])
+            + by_ext.get(".yml", [])
+        )
+    
 
 #/////////////////////////////////////////////
 # F5 VERIFICATION ORCHESTRATOR ///////////////
