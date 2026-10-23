@@ -211,6 +211,13 @@ def _checks(project, files, deadline, root):
             + by_ext.get(".yml", [])
         )
     
+    if any(p.name == ".env.example" for p in files):
+        yield lang.check_env(
+            [
+                p for p in files
+                if p.name == ".env.example"
+            ]
+        )
 
 #/////////////////////////////////////////////
 # F5 VERIFICATION ORCHESTRATOR ///////////////
