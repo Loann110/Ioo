@@ -619,3 +619,21 @@ def _package(project):
 
     except (ValueError, OSError):
         return None
+
+#/////////////////////////////////////////////
+# PACKAGE DEPENDENCIES ///////////////////////
+#/////////////////////////////////////////////
+def _dependencies(manifest):
+    dependencies = manifest.get("dependencies") or {}
+    dev_dependencies = manifest.get("devDependencies") or {}
+
+    if (
+        not isinstance(dependencies, dict)
+        or not isinstance(dev_dependencies, dict)
+    ):
+        return {}
+
+    return {
+        **dependencies,
+        **dev_dependencies,
+    }
