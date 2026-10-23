@@ -992,3 +992,49 @@ def check_yaml(files):
             raise ValueError(str(exc)) from exc
 
     return _parse_file("yaml", files, parse)
+
+
+#/////////////////////////////////////////////
+# ENV TEMPLATE VERIFICATION //////////////////
+#/////////////////////////////////////////////
+def check_env(files):
+    """
+    Only check the KEY=VALUE layout.
+    Never echo values or credentials.
+    """
+    bad, checked = [], 0
+
+    for path in files:
+        if not path.is_file():
+            continue
+
+        checked += 1
+
+        for line_no, line in enumerate(
+            _read(path).splitlines(), 1
+        ):
+            line = line.strip()
+
+            if line and not line.startswith("#") and not re.match(
+                r"^(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=",
+                line,
+            ):
+                bad.append(
+                    f"{path.name}:{line_no}: invalid assignment"
+                )
+
+    if bad:
+        failed = result(
+            "env_example",
+            "fail",
+            "invalid_syntax",
+            output="\n".join(bad)[-OUTPUT_TAIL:],
+        )
+        failed["failures"] = [
+            f"env_example: {line}" for line in bad
+        ]
+        failed["log"] = "\n".join(bad)
+
+        return failed
+
+    return result("env_example", "ok") if checked else None
