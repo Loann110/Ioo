@@ -566,3 +566,40 @@ def _parents(project, root=None):
             return
 
         folder = folder.parent
+
+#/////////////////////////////////////////////
+# NODE DEPENDENCIES //////////////////////////
+#/////////////////////////////////////////////
+def node_modules(project, root=None):
+    """
+    Nearest node_modules folder, or None.
+    """
+    for folder in _parents(project, root):
+        if (folder / "node_modules").is_dir():
+            return folder / "node_modules"
+
+    return None
+
+#/////////////////////////////////////////////
+# LOCAL NODE EXECUTABLES /////////////////////
+#/////////////////////////////////////////////
+def local_bin(project, name, root=None):
+    """
+    Executable installed in this project's (or the workspace's) node_modules.
+    """
+    suffixes = (
+        (".cmd", "") if os.name == "nt"
+        else ("", ".cmd")
+    )
+
+    for folder in _parents(project, root):
+        for suffix in suffixes:
+            path = (
+                folder / "node_modules" /
+                ".bin" / (name + suffix)
+            )
+
+            if path.is_file():
+                return str(path)
+
+    return None
