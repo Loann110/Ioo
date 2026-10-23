@@ -195,9 +195,15 @@ def _checks(project, files, deadline, root):
         yield lang.check_javascript(project, deadline, root)
     
     if suffixes & {".js", ".mjs", ".cjs"}:
-        yield lang.check_node_syntax(project, files, deadline)
-
-
+        yield lang.check_node_syntax(project, files, deadline)     
+    
+    if suffixes & TS_EXT:
+        yield lang.check_typescript(
+            project,
+            deadline,
+            suffixes,
+            root,
+        )
 
 #/////////////////////////////////////////////
 # F5 VERIFICATION ORCHESTRATOR ///////////////
@@ -342,3 +348,5 @@ def _safe(outcomes):
         )
         crashed["log"] = traceback.format_exc()
         yield crashed
+
+
