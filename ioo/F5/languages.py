@@ -413,3 +413,47 @@ def _service_down(outcome):
         )
 
     return outcome
+
+
+#/////////////////////////////////////////////
+# CHECK COMMAND AGGREGATION //////////////////
+#/////////////////////////////////////////////
+def run_all(name, commands, cwd, deadline):
+    """
+    Several commands reported as one check:
+    every failure is kept for the comparison.
+    """
+    outcomes = [
+        run(name, command, cwd, deadline)
+        for command in commands
+    ]
+
+    failed = [
+        o for o in outcomes
+        if o["status"] == "fail"
+    ]
+
+    if failed:
+        first = failed[0]
+
+        first["output"] = "\n".join(
+            o["output"] or "" for o in failed
+        )[-OUTPUT_TAIL:]
+
+        first["failures"] = sorted({
+            f
+            for o in failed
+            for f in o["failures"]
+        })
+
+        first["log"] = "\n".join(
+            o["log"] for o in failed
+        )
+
+        return first
+
+    return next(
+        (o for o in outcomes if o["status"] != "ok"),
+        outcomes[0],
+    )
+
