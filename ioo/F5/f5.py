@@ -181,6 +181,13 @@ def _checks(project, files, deadline, root):
 
     if ".py" in suffixes:
         yield lang.check_python_syntax(by_ext[".py"])
+    
+    if ".py" in suffixes or any(
+        p.name in ("pyproject.toml", "pytest.ini")
+        for p in files
+    ):
+        yield lang.check_python(project, deadline)
+
 
 
 #/////////////////////////////////////////////
