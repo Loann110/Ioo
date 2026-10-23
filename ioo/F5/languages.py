@@ -151,3 +151,77 @@ def check_python_syntax(files):
         files,
         lambda text: compile(text, "<file>", "exec", dont_inherit=True),
     )
+
+
+#################################################################################
+#################################################################################
+# TEST FAILURE ANALYSIS AND DIAGNOSTICS #########################################
+#################################################################################
+#################################################################################
+
+
+#/////////////////////////////////////////////
+# FAILURE IDENTIFICATION /////////////////////
+#/////////////////////////////////////////////
+SERVICE_DOWN = re.compile(
+    r"Connection refused|ECONNREFUSED|could not connect to server|OperationalError"
+    r"|Can't connect to (?:MySQL|local MySQL) server|getaddrinfo ENOTFOUND",
+    re.I,
+)
+
+ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
+VOLATILE = re.compile(
+    r"0x[0-9a-f]+|\d+(?:\.\d+)?",
+    re.I,
+)
+
+FAILURE_PATTERNS = [
+    # pytest
+    re.compile(r"^(?:FAILED|ERROR) (\S+)"),
+
+    # Django / unittest
+    re.compile(r"^(?:FAIL|ERROR): (\S+ \([^)]+\))"),
+
+    # Jest
+    re.compile(r"^\s*\u25cf (.+?)\s*$"),
+
+    # Vitest
+    re.compile(
+        r"^\s*(?:FAIL|\u00d7|\u2717)\s+"
+        r"(\S+\.[cm]?[jt]sx? > .+?)(?:\s+\d+ms)?\s*$"
+    ),
+
+    # TypeScript
+    re.compile(r"^(\S+?)\(\d+,\d+\): error (TS\d+: .+)$"),
+]
+
+
+def failure_ids(name, output):
+    """
+    Extract stable identifiers from failed tests and command output.
+    """
+    found, lines = [], []
+
+    for line in ANSI.sub("", output or "").splitlines():
+        for pattern in FAILURE_PATTERNS:
+            match = pattern.match(line)
+
+            if match:
+                ident = ": ".join(
+                    g for g in match.groups() if g
+                )
+
+                if not ident.startswith("Console"):
+                    found.append(f"{name}: {ident}")
+
+                break
+        else:
+            line = VOLATILE.sub("#", line.strip())[:200]
+
+            if line.strip("#-=*_ "):
+                lines.append(f"{name}: {line}")
+
+    return sorted(set(found or lines[:200])) or [
+        f"{name}: unparsed"
+    ]
