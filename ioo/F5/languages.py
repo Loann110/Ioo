@@ -964,3 +964,31 @@ def check_typescript(project, deadline, extensions=None, root=None):
         project,
         deadline,
     )
+
+
+#################################################################################
+#################################################################################
+# CONFIGURATION FILE VALIDATION #################################################
+#################################################################################
+#################################################################################
+
+#/////////////////////////////////////////////
+# YAML VERIFICATION //////////////////////////
+#/////////////////////////////////////////////
+def check_yaml(files):
+    try:
+        import yaml
+    except ImportError:
+        return result(
+            "yaml",
+            "unverified",
+            "yaml_parser_not_installed",
+        )
+
+    def parse(text):
+        try:
+            return yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise ValueError(str(exc)) from exc
+
+    return _parse_file("yaml", files, parse)
