@@ -457,3 +457,18 @@ def run_all(name, commands, cwd, deadline):
         outcomes[0],
     )
 
+
+#/////////////////////////////////////////////
+# PYTHON ENVIRONMENT /////////////////////////
+#/////////////////////////////////////////////
+def python_bin(project):
+    project = Path(project)
+
+    for env in (".venv", "venv"):
+        for rel in ("Scripts/python.exe", "bin/python"):
+            path = project / env / rel
+
+            if path.is_file():
+                return str(path)
+
+    return sys.executable
