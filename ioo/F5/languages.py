@@ -840,3 +840,45 @@ def check_node_syntax(project, files, deadline):
         project,
         deadline,
     )
+
+
+#################################################################################
+#################################################################################
+# TYPESCRIPT CONFIGURATION AND TYPE CHECKING ####################################
+#################################################################################
+#################################################################################
+
+
+#/////////////////////////////////////////////
+# TYPESCRIPT CONFIG DISCOVERY ////////////////
+#/////////////////////////////////////////////
+def ts_configs(project):
+    """
+    tsconfig files to check one by one.
+    A solution tsconfig ("files": [] + references, as in Vite) checks nothing itself.
+    """
+    text = _read(Path(project) / "tsconfig.json")
+
+    configs = (
+        []
+        if re.search(r'"files"\s*:\s*\[\s*\]', text)
+        else ["tsconfig.json"]
+    )
+
+    refs = text.split('"references"', 1)
+
+    for ref in re.findall(
+        r'"path"\s*:\s*"([^"]+)"',
+        refs[1] if len(refs) > 1 else "",
+    ):
+        path = Path(project) / ref
+
+        configs.append(
+            str(
+                path / "tsconfig.json"
+                if path.is_dir()
+                else path
+            )
+        )
+
+    return configs or ["tsconfig.json"]
