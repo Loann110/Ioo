@@ -391,3 +391,25 @@ def run(name, command, cwd, deadline):
     failed["log"] = full
 
     return failed
+
+
+#/////////////////////////////////////////////
+# SERVICE AVAILABILITY ///////////////////////
+#/////////////////////////////////////////////
+def _service_down(outcome):
+    """
+    A failed test run caused by an unreachable service becomes unverified.
+    """
+    if (
+        outcome["status"] == "fail"
+        and SERVICE_DOWN.search(outcome["output"] or "")
+    ):
+        return result(
+            outcome["name"],
+            "unverified",
+            "service_unavailable",
+            outcome["command"],
+            returncode=outcome["returncode"],
+        )
+
+    return outcome
