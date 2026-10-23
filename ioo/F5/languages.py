@@ -225,3 +225,34 @@ def failure_ids(name, output):
     return sorted(set(found or lines[:200])) or [
         f"{name}: unparsed"
     ]
+
+
+#/////////////////////////////////////////////
+# FAILURE EXCERPTS ///////////////////////////
+#/////////////////////////////////////////////
+def excerpt(output, ident, extra=3):
+    """
+    The output line naming one failure, plus the few lines that explain it
+    (expected/received, assertion): enough to repair, not the whole log.
+    """
+    text = ident.split(": ", 1)[-1]
+    lines = ANSI.sub("", output or "").splitlines()
+
+    # tsc ids drop the position, so the message alone finds the line.
+    for needle in dict.fromkeys((text, text.split(": ", 1)[-1])):
+        for i, line in enumerate(lines):
+            if needle in line:
+                if line.startswith(("FAILED ", "ERROR ")):
+                    return line.strip()[:300]
+
+                after = [
+                    l.strip()
+                    for l in lines[i + 1:i + 15]
+                    if l.strip() and not l.strip().startswith("at ")
+                ]
+
+                return " | ".join(
+                    [line.strip(), *after[:extra]]
+                )[:400]
+
+    return text[:300]
