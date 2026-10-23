@@ -310,3 +310,84 @@ def forget_bytecode(files):
                 pyc_cache() / folder.lstrip("\\/")
             ).glob(f"{Path(path).stem}.*.pyc"):
                 pyc.unlink(missing_ok=True)
+
+
+#/////////////////////////////////////////////
+# LOCAL CHECK EXECUTION //////////////////////
+#/////////////////////////////////////////////
+def run(name, command, cwd, deadline):
+    """
+    Run a local command (never a shell or package downloader).
+    """
+    remaining = deadline - time.monotonic()
+    shown = short_command(command)
+
+    if remaining <= 0:
+        return result(
+            name, "unverified", "time_budget_exhausted", shown
+        )
+
+    executable = shutil.which(str(command[0])) or str(command[0])
+
+    try:
+        completed = subprocess.run(
+            [executable, *map(str, command[1:])],
+            cwd=cwd,
+            env={
+                **os.environ,
+                "CI": "true",
+                "NO_COLOR": "1",
+                "FORCE_COLOR": "0",
+                "PYTHONUTF8": "1",
+                "PYTHONIOENCODING": "utf-8",
+                "PYTHONPYCACHEPREFIX": str(pyc_cache()),
+                "COLUMNS": "200",
+            },
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=remaining,
+            check=False,
+        )
+
+    except FileNotFoundError:
+        return result(
+            name, "unverified", "tool_not_installed", shown
+        )
+
+    except subprocess.TimeoutExpired:
+        return result(
+            name, "unverified", "timeout", shown
+        )
+
+    except OSError as exc:
+        return result(
+            name,
+            "unverified",
+            "execution_error",
+            shown,
+            str(exc)[-OUTPUT_TAIL:],
+        )
+
+    full = (completed.stdout + "\n" + completed.stderr).strip()
+    output = full[-OUTPUT_TAIL:]
+
+    if completed.returncode == 0:
+        return result(
+            name, "ok", command=shown, returncode=0
+        )
+
+    failed = result(
+        name,
+        "fail",
+        "nonzero_exit",
+        shown,
+        output,
+        completed.returncode,
+    )
+
+    failed["failures"] = failure_ids(name, full)
+    failed["log"] = full
+
+    return failed
