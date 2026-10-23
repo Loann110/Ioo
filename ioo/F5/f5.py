@@ -187,7 +187,12 @@ def _checks(project, files, deadline, root):
         for p in files
     ):
         yield lang.check_python(project, deadline)
-
+        
+    if suffixes & NODE_EXT or any(
+        p.name == "package.json"
+        for p in files
+    ):
+        yield lang.check_javascript(project, deadline, root)
 
 
 #/////////////////////////////////////////////
