@@ -472,3 +472,71 @@ def python_bin(project):
                 return str(path)
 
     return sys.executable
+
+
+#/////////////////////////////////////////////
+# PYTHON TEST EXECUTION //////////////////////
+#/////////////////////////////////////////////
+def check_python(project, deadline):
+    project = Path(project)
+    config = project / "pyproject.toml"
+    config_text = _read(config) if config.is_file() else ""
+
+    pytest_config = (
+        any(
+            (project / p).is_file()
+            for p in ("pytest.ini", "conftest.py")
+        )
+        or "[tool.pytest.ini_options]" in config_text
+    )
+
+    has_tests = (
+        (project / "tests").is_dir()
+        or bool(list(project.glob("test_*.py")))
+        or bool(list(project.glob("*_test.py")))
+    )
+
+    if (project / "manage.py").is_file() and not pytest_config:
+        command = [python_bin(project), "manage.py", "test"]
+
+    elif pytest_config or has_tests:
+        # No -x: old failures must not hide new ones.
+        command = [
+            python_bin(project),
+            "-m", "pytest",
+            "-q", "-rfE", "--tb=short",
+        ]
+
+    else:
+        return result(
+            "python",
+            "unverified",
+            "no_tests_detected",
+        )
+
+    outcome = run("python", command, project, deadline)
+
+    if (
+        outcome["status"] == "fail"
+        and command[1:3] == ["-m", "pytest"]
+    ):
+        if "No module named pytest" in (outcome["output"] or ""):
+            return result(
+                "python",
+                "unverified",
+                "pytest_not_installed",
+                outcome["command"],
+                returncode=outcome["returncode"],
+            )
+
+        if outcome["returncode"] == 5:
+            return result(
+                "python",
+                "unverified",
+                "no_tests_collected",
+                outcome["command"],
+                returncode=5,
+            )
+
+    return _service_down(outcome)
+
