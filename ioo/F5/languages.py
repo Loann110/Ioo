@@ -603,3 +603,19 @@ def local_bin(project, name, root=None):
                 return str(path)
 
     return None
+
+#/////////////////////////////////////////////
+# PACKAGE MANIFEST ///////////////////////////
+#/////////////////////////////////////////////
+def _package(project):
+    path = Path(project) / "package.json"
+
+    if not path.is_file():
+        return None
+
+    try:
+        data = json.loads(_read(path))
+        return data if isinstance(data, dict) else None
+
+    except (ValueError, OSError):
+        return None
