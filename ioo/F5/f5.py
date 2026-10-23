@@ -189,7 +189,6 @@ def _checks(project, files, deadline, root):
         yield lang.check_python(project, deadline)
 
 
-
 #/////////////////////////////////////////////
 # F5 VERIFICATION ORCHESTRATOR ///////////////
 #/////////////////////////////////////////////
@@ -215,6 +214,8 @@ def verify(root, changed=None, budget=None):
             "checks": [],
             "detail": str(exc),
         }
+    
+    lang.forget_bytecode(files)
 
     groups = {}
 
@@ -232,6 +233,7 @@ def verify(root, changed=None, budget=None):
         key=lambda pair: str(pair[0]),
     ):
         outcomes = _checks(project, paths, deadline, root)
+        outcomes = _safe(outcomes)
 
         for outcome in outcomes:
             if outcome is None:
