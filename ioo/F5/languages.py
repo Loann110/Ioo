@@ -500,7 +500,7 @@ def check_python(project, deadline):
         command = [python_bin(project), "manage.py", "test"]
 
     elif pytest_config or has_tests:
-        # No -x: old failures must not hide new ones.
+        
         command = [
             python_bin(project),
             "-m", "pytest",
@@ -540,3 +540,29 @@ def check_python(project, deadline):
 
     return _service_down(outcome)
 
+
+#################################################################################
+#################################################################################
+# NODE.JS PROJECT DISCOVERY AND DEPENDENCIES ####################################
+#################################################################################
+#################################################################################
+
+
+#/////////////////////////////////////////////
+# WORKSPACE PARENTS //////////////////////////
+#/////////////////////////////////////////////
+def _parents(project, root=None):
+    """
+    The project folder, then its parents up to the repository root.
+    Workspaces (npm, pnpm, yarn) install node_modules at the root.
+    """
+    folder = Path(project).resolve()
+    stop = Path(root).resolve() if root else folder
+
+    while True:
+        yield folder
+
+        if folder == stop or folder == folder.parent:
+            return
+
+        folder = folder.parent
