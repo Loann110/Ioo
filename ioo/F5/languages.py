@@ -882,3 +882,85 @@ def ts_configs(project):
         )
 
     return configs or ["tsconfig.json"]
+
+
+#/////////////////////////////////////////////
+# TYPESCRIPT TYPE CHECKING ///////////////////
+#/////////////////////////////////////////////
+def check_typescript(project, deadline, extensions=None, root=None):
+    """
+    Use project-local typecheckers, the way the framework itself checks types.
+    Plain tsc does not check .vue/.svelte.
+    """
+    project = Path(project)
+    extensions = extensions or set()
+    deps = _dependencies(_package(project) or {})
+
+    if "nuxt" in deps:
+        # nuxi generates .nuxt types first. It would download vue-tsc if missing.
+        if not local_bin(project, "vue-tsc", root):
+            return result(
+                "typescript",
+                "unverified",
+                "vue-tsc_not_installed",
+            )
+
+        binary, commands = "nuxi", [["typecheck"]]
+
+    elif ".svelte" in extensions or "svelte" in deps:
+        binary, commands = (
+            "svelte-check",
+            [["--output", "machine", "--threshold", "error"]],
+        )
+
+        sync = (
+            local_bin(project, "svelte-kit", root)
+            if "@sveltejs/kit" in deps
+            else None
+        )
+
+        if sync:
+            synced = run(
+                "typescript",
+                [sync, "sync"],
+                project,
+                deadline,
+            )
+
+            if synced["status"] != "ok":
+                return synced
+
+    else:
+        if not (project / "tsconfig.json").is_file():
+            return result(
+                "typescript",
+                "unverified",
+                "no_tsconfig",
+            )
+
+        binary = (
+            "vue-tsc"
+            if ".vue" in extensions or "vue" in deps
+            else "tsc"
+        )
+
+        commands = [
+            ["--noEmit", "-p", config]
+            for config in ts_configs(project)
+        ]
+
+    tool = local_bin(project, binary, root)
+
+    if not tool:
+        return result(
+            "typescript",
+            "unverified",
+            f"{binary}_not_installed",
+        )
+
+    return run_all(
+        "typescript",
+        [[tool, *args] for args in commands],
+        project,
+        deadline,
+    )
