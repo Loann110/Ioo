@@ -282,3 +282,31 @@ def short_command(command):
 #/////////////////////////////////////////////
 def pyc_cache():
     return cache_root() / "pyc"
+
+
+#/////////////////////////////////////////////
+# BYTECODE INVALIDATION //////////////////////
+#/////////////////////////////////////////////
+def forget_bytecode(files):
+    """
+    .pyc files are trusted on source mtime (whole seconds) and size: a same-size
+    edit within a second would run stale code. Drop the changed files' entries.
+    Same layout as CPython with PYTHONPYCACHEPREFIX: drive removed, path kept.
+    """
+    for path in files:
+        if Path(path).suffix != ".py":
+            continue
+
+        for source in {
+            os.path.abspath(path),
+            os.path.realpath(path),
+        }:
+            folder = os.path.dirname(source)
+
+            if len(folder) > 1 and folder[1] == ":":
+                folder = folder[2:]
+
+            for pyc in (
+                pyc_cache() / folder.lstrip("\\/")
+            ).glob(f"{Path(path).stem}.*.pyc"):
+                pyc.unlink(missing_ok=True)
