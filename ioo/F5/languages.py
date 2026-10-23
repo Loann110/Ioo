@@ -663,3 +663,24 @@ def framework_name(manifest):
             return label
 
     return "javascript"
+
+
+#################################################################################
+#################################################################################
+# NODE.JS TEST EXECUTION AND SYNTAX VERIFICATION ################################
+#################################################################################
+#################################################################################
+
+#/////////////////////////////////////////////
+# PLAYWRIGHT E2E TESTS ///////////////////////
+#/////////////////////////////////////////////
+def check_playwright(project, deadline):
+    """
+    E2E may access live services or write data:
+    require explicit future opt-in.
+    """
+    return result(
+        "playwright",
+        "unverified",
+        "e2e_requires_opt_in",
+    )
