@@ -637,3 +637,29 @@ def _dependencies(manifest):
         **dependencies,
         **dev_dependencies,
     }
+
+
+#/////////////////////////////////////////////
+# FRAMEWORK DETECTION ////////////////////////
+#/////////////////////////////////////////////
+def framework_name(manifest):
+    """
+    Classify frameworks for reporting, not for claiming test coverage.
+    """
+    deps = _dependencies(manifest)
+
+    for package, label in (
+        ("next", "nextjs"),
+        ("nuxt", "nuxt"),
+        ("@nestjs/core", "nestjs"),
+        ("fastify", "fastify"),
+        ("express", "express"),
+        ("@sveltejs/kit", "sveltekit"),
+        ("svelte", "svelte"),
+        ("vue", "vue"),
+        ("react", "react"),
+    ):
+        if package in deps:
+            return label
+
+    return "javascript"
