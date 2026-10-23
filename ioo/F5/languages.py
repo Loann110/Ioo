@@ -684,3 +684,90 @@ def check_playwright(project, deadline):
         "unverified",
         "e2e_requires_opt_in",
     )
+
+
+#/////////////////////////////////////////////
+# JAVASCRIPT TEST EXECUTION //////////////////
+#/////////////////////////////////////////////
+def check_javascript(project, deadline, root=None):
+    """
+    Run only an existing test script with a locally available package manager.
+    """
+    manifest = _package(project)
+
+    if manifest is None:
+        return result(
+            "javascript",
+            "unverified",
+            "package_json_missing_or_invalid",
+        )
+
+    name = framework_name(manifest)
+    scripts = manifest.get("scripts")
+    script = scripts.get("test", "") if isinstance(scripts, dict) else ""
+
+    if (
+        not isinstance(script, str)
+        or not script.strip()
+        or "no test specified" in script.lower()
+    ):
+        return result(name, "unverified", "no_test_script")
+
+    test_script = "test"
+
+    if "playwright" in script.lower():
+        # Unit tests still run when a separate script holds them.
+        unit = next(
+            (
+                s for s in ("test:unit", "unit")
+                if isinstance(scripts.get(s), str)
+                and "playwright" not in scripts[s].lower()
+            ),
+            None,
+        )
+
+        if unit is None:
+            return check_playwright(project, deadline)
+
+        test_script = unit
+
+    if (
+        manifest.get("dependencies")
+        or manifest.get("devDependencies")
+    ) and node_modules(project, root) is None:
+        return result(
+            name,
+            "unverified",
+            "node_dependencies_not_installed",
+        )
+
+    project = Path(project)
+
+    # Workspaces keep the lockfile at the repository root.
+    locks = {
+        lock.name
+        for folder in _parents(project, root)
+        for lock in folder.glob("*.lock*")
+    }
+
+    if any(
+        (folder / "pnpm-lock.yaml").exists()
+        for folder in _parents(project, root)
+    ):
+        locks.add("pnpm-lock.yaml")
+
+    if "pnpm-lock.yaml" in locks:
+        command = ["pnpm", "run", test_script]
+
+    elif "yarn.lock" in locks:
+        command = ["yarn", "run", test_script]
+
+    elif locks & {"bun.lock", "bun.lockb"}:
+        command = ["bun", "run", test_script]
+
+    else:
+        command = ["npm", "run", test_script, "--silent"]
+
+    return _service_down(
+        run(name, command, project, deadline)
+    )
