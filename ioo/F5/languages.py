@@ -256,3 +256,17 @@ def excerpt(output, ident, extra=3):
                 )[:400]
 
     return text[:300]
+
+
+#/////////////////////////////////////////////
+# COMMAND DISPLAY ////////////////////////////
+#/////////////////////////////////////////////
+def short_command(command):
+    """
+    The command as Claude would type it:
+    tool name, not its absolute path.
+    """
+    return " ".join([
+        Path(str(command[0])).name,
+        *map(str, command[1:]),
+    ])
